@@ -12,13 +12,23 @@
       # Drop a minimal config; the user can override fully in their per-(user,host) module.
       home.file.".config/aerospace/aerospace.toml" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
         text = ''
+          config-version = 2
           start-at-login = true
+          persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
           enable-normalization-flatten-containers = true
           enable-normalization-opposite-orientation-for-nested-containers = true
 
           accordion-padding = 30
           default-root-container-layout = 'tiles'
           default-root-container-orientation = 'auto'
+
+          [gaps]
+          inner.horizontal = 8
+          inner.vertical = 8
+          outer.left = 8
+          outer.right = 8
+          outer.top = 8
+          outer.bottom = 8
 
           [mode.main.binding]
           alt-h = 'focus left'
@@ -31,15 +41,75 @@
           alt-shift-k = 'move up'
           alt-shift-l = 'move right'
 
+          alt-minus = 'resize smart -50'
+          alt-equal = 'resize smart +50'
+
+          alt-slash = 'layout tiles horizontal vertical'
+          alt-comma = 'layout accordion horizontal vertical'
+          alt-f = 'fullscreen'
+          alt-shift-space = 'layout floating tiling'
+
+          alt-tab = 'workspace-back-and-forth'
+          alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
+
           alt-1 = 'workspace 1'
           alt-2 = 'workspace 2'
           alt-3 = 'workspace 3'
           alt-4 = 'workspace 4'
+          alt-5 = 'workspace 5'
+          alt-6 = 'workspace 6'
+          alt-7 = 'workspace 7'
+          alt-8 = 'workspace 8'
+          alt-9 = 'workspace 9'
 
           alt-shift-1 = 'move-node-to-workspace 1'
           alt-shift-2 = 'move-node-to-workspace 2'
           alt-shift-3 = 'move-node-to-workspace 3'
           alt-shift-4 = 'move-node-to-workspace 4'
+          alt-shift-5 = 'move-node-to-workspace 5'
+          alt-shift-6 = 'move-node-to-workspace 6'
+          alt-shift-7 = 'move-node-to-workspace 7'
+          alt-shift-8 = 'move-node-to-workspace 8'
+          alt-shift-9 = 'move-node-to-workspace 9'
+
+          alt-shift-semicolon = 'mode service'
+
+          [mode.service.binding]
+          esc = ['reload-config', 'mode main']
+          r = ['flatten-workspace-tree', 'mode main']
+          backspace = ['close-all-windows-but-current', 'mode main']
+
+          [[on-window-detected]]
+          if.app-id = 'org.mozilla.firefox'
+          run = 'move-node-to-workspace 1'
+
+          [[on-window-detected]]
+          if.app-id = 'com.mitchellh.ghostty'
+          run = 'move-node-to-workspace 2'
+
+          [[on-window-detected]]
+          if.app-id = 'com.jetbrains.PhpStorm'
+          run = 'move-node-to-workspace 2'
+
+          [[on-window-detected]]
+          if.app-id = 'com.tinyspeck.slackmacgap'
+          run = 'move-node-to-workspace 3'
+
+          [[on-window-detected]]
+          if.app-id = 'com.spotify.client'
+          run = 'move-node-to-workspace 3'
+
+          [[on-window-detected]]
+          if.app-id = 'com.usebruno.app'
+          run = 'move-node-to-workspace 4'
+
+          [[on-window-detected]]
+          if.app-id = 'com.apple.systempreferences'
+          run = 'layout floating'
+
+          [[on-window-detected]]
+          if.app-id = 'org.keepassxc.keepassxc'
+          run = 'layout floating'
         '';
       };
     };

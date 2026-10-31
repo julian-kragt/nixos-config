@@ -24,8 +24,10 @@
         ./mac-settings.nix
         ./projects/appreo.nix
         onedrive
+        microsoft-apps
         claude-desktop
         sunsama
+        zotero
         usersDispatch
       ];
 

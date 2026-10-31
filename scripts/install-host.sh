@@ -6,7 +6,7 @@
 #   scripts/install-host.sh <host> <ip> --enroll-sops
 #   scripts/install-host.sh <host> <ip> --deploy-remote
 #
-# Install policy is read from hosts/nixos/<host>/bootstrap.nix (provisionSpec module).
+# Install policy uses env-overridable defaults; host facts come from the bootstrap hostSpec.
 # LUKS passphrase: set DISKO_PASSWORD or enter at prompt (never stored in Nix).
 set -euo pipefail
 
@@ -80,91 +80,37 @@ log_step "Configuration"
 CONFIG_PATH="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$CONFIG_PATH"
 
-BOOTSTRAP="hosts/nixos/${HOST}/bootstrap.nix"
+BOOTSTRAP="hosts/nixos/${HOST}/disko.nix"
 [[ -f "$BOOTSTRAP" ]] || {
   echo "error: $HOST is not a NixOS host with $BOOTSTRAP" >&2
   exit 1
 }
 
-CFG="#nixosConfigurations.${HOST}-bootstrap.config"
-SPEC="${CFG}.provisionSpec"
+# One generic bootstrap config; the host is its input (read via getEnv, hence --impure).
+export BOOTSTRAP_HOST="$HOST"
+CFG="#nixosConfigurations.bootstrap.config"
 
 nix_eval_raw() {
-  nix eval --raw "$1"
+  nix eval --impure --raw "$1"
 }
 
 nix_eval_bool() {
   [[ "$(nix eval --expr "$1" 2>/dev/null)" == "true" ]]
 }
 
-eval_spec() {
-  nix eval --json "${SPEC}" \
-    --apply 'x: {
-      PRIMARY_USER = x.primaryUser;
-      GENERATE_HARDWARE = x.generateHardware;
-      ENROLL_SOPS = x.enrollSops;
-      PROVISION_USER_AGE = x.provisionUserAgeKey;
-      PUSH_SECRETS = x.pushSecrets;
-      DEPLOY_FULL = x.deployFullConfig;
-      SSH_TIMEOUT = x.sshWaitTimeout;
-      LUKS_FILE = x.luksPasswordFile;
-      HW_REL = x.hardwareConfigPath;
-      NIX_SECRETS_PATH = x.nixSecretsPath;
-    }'
-}
+PRIMARY_USER="$(nix eval --impure --raw "${CFG}.hostSpec.primaryUser")"
 
-CONFIG_JSON="$(eval_spec)"
-
-while true; do
-  echo -e "\e[33mCurrent config:\e[0m"
-  echo "$CONFIG_JSON" | jq
-
-  read -r -p $'\e[33mEdit config?\e[0m [e=edit/n]: ' reply
-
-  case "$reply" in
-    [Ee])
-      "${EDITOR:-vi}" "$BOOTSTRAP"
-
-      NEW_JSON="$(eval_spec)"
-
-      echo -e "\e[33mDiff:\e[0m"
-      jq -r --argjson old "$CONFIG_JSON" --argjson new "$NEW_JSON" -n '
-        def red:   "\u001b[31m";
-        def green: "\u001b[32m";
-        def bold:  "\u001b[1m";
-        def reset: "\u001b[0m";
-
-        ($old + $new | keys_unsorted[]) as $k
-        | select($old[$k] != $new[$k])
-        | "\(bold)\($k)\(reset): \(red)\($old[$k])\(reset) → \(green)\($new[$k])\(reset)"
-      '
-
-      CONFIG_JSON="$NEW_JSON"
-      continue
-      ;;
-
-    [Nn])
-      break
-      ;;
-
-    *)
-      echo "exit"
-      exit 1
-      ;;
-  esac
-done
-
-PRIMARY_USER="$(jq -r '.PRIMARY_USER' <<< "$CONFIG_JSON")"
-GENERATE_HARDWARE="$(jq -r '.GENERATE_HARDWARE' <<< "$CONFIG_JSON")"
-ENROLL_SOPS="$(jq -r '.ENROLL_SOPS' <<< "$CONFIG_JSON")"
-PROVISION_USER_AGE="$(jq -r '.PROVISION_USER_AGE' <<< "$CONFIG_JSON")"
-PUSH_SECRETS="$(jq -r '.PUSH_SECRETS' <<< "$CONFIG_JSON")"
-DEPLOY_FULL="$(jq -r '.DEPLOY_FULL' <<< "$CONFIG_JSON")"
-SSH_TIMEOUT="$(jq -r '.SSH_TIMEOUT' <<< "$CONFIG_JSON")"
-LUKS_FILE="$(jq -r '.LUKS_FILE' <<< "$CONFIG_JSON")"
-HW_REL="$(jq -r '.HW_REL' <<< "$CONFIG_JSON")"
-HW_PATH="hosts/nixos/${HOST}/${HW_REL}"
-NIX_SECRETS_PATH="$(jq -r '.NIX_SECRETS_PATH' <<< "$CONFIG_JSON")"
+# Install policy defaults; override via environment.
+GENERATE_HARDWARE="${GENERATE_HARDWARE:-true}"
+ENROLL_SOPS="${ENROLL_SOPS:-true}"
+PROVISION_USER_AGE="${PROVISION_USER_AGE:-true}"
+PUSH_SECRETS="${PUSH_SECRETS:-true}"
+DEPLOY_FULL="${DEPLOY_FULL:-true}"
+SSH_TIMEOUT="${SSH_TIMEOUT:-600}"
+LUKS_FILE="${LUKS_FILE:-/tmp/disko-password}"
+HW_PATH="hosts/nixos/${HOST}/hardware-configuration.nix"
+NIX_SECRETS_PATH="${NIX_SECRETS_PATH:-../nix-secrets}"
+read -r -a ANYWHERE_EXTRA <<< "${NIXOS_ANYWHERE_EXTRA:-}"
 
 # Resolve relative nix-secrets path against the config repo.
 if [[ "$NIX_SECRETS_PATH" != /* ]]; then
@@ -385,7 +331,7 @@ fi
 
 # --- Phase 3: nixos-anywhere ---
 if [[ "$RUN_INSTALL" == "1" && "$ALREADY_INSTALLED" == "0" ]]; then
-  log_step "Installing ${HOST}-bootstrap on ${IP}"
+  log_step "Installing bootstrap for ${HOST} on ${IP}"
 
   HW_ARGS=()
   if nix_eval_bool "$GENERATE_HARDWARE"; then
@@ -396,16 +342,11 @@ if [[ "$RUN_INSTALL" == "1" && "$ALREADY_INSTALLED" == "0" ]]; then
     )
   fi
 
-  ANYWHERE_EXTRA=()
-  while IFS= read -r flag; do
-    [[ -n "$flag" ]] && ANYWHERE_EXTRA+=("$flag")
-  done < <(nix eval --json "${SPEC}.nixosAnywhereExtra" | jq -r '.[]?')
-
   # shellcheck disable=SC2086
   nix run github:nix-community/nixos-anywhere -- \
     "${HW_ARGS[@]}" \
     --build-on-remote \
-    --flake ".#${HOST}-bootstrap" \
+    --flake ".#bootstrap" \
     --target-host "root@${IP}" \
     ${ANYWHERE_EXTRA[@]+"${ANYWHERE_EXTRA[@]}"}
 

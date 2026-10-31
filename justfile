@@ -42,7 +42,7 @@ rebuild host=`hostname -s`:
       sudo nixos-rebuild switch --flake ".#$host"
     fi
 
-# Provision a fresh NixOS host (Linux only; reads provisionSpec from bootstrap.nix).
+# Provision a fresh NixOS host (Linux only; uses the generic bootstrap config).
 install host ip:
     bash scripts/install-host.sh {{host}} {{ip}}
 

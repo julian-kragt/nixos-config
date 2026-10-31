@@ -2,12 +2,32 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }:
 let
   valetHome = "${config.hostSpec.home}/.config/valet";
   phpVersion = "8.3";
   valetSock = "valet${builtins.replaceStrings [ "." ] [ "" ] phpVersion}.sock";
+
+  # nixpkgs' libmemcached.pc has doubled store paths and `Requires: libsasl2`,
+  # and pecl's configure resets PKG_CONFIG_PATH to <dir>/lib/pkgconfig only, so
+  # pkg-config can't resolve it. Provide a prefix with a self-contained .pc.
+  libmemcachedForPecl = pkgs.runCommand "libmemcached-for-pecl" { } ''
+    mkdir -p $out/lib/pkgconfig
+    ln -s ${pkgs.libmemcached}/include $out/include
+    for f in ${pkgs.libmemcached}/lib/*; do
+      [ "$(basename $f)" = pkgconfig ] || ln -s $f $out/lib/
+    done
+    cat > $out/lib/pkgconfig/libmemcached.pc <<EOF
+    prefix=$out
+    Name: libmemcached
+    Description: libmemcached C/C++ library
+    Version: ${pkgs.libmemcached.version}
+    Libs: -L${pkgs.libmemcached}/lib -L${pkgs.cyrus_sasl.out}/lib -lmemcached -lmemcachedutil -lsasl2
+    Cflags: -I${pkgs.libmemcached}/include -I${pkgs.cyrus_sasl.dev}/include
+    EOF
+  '';
 
   valetFpmConf = pkgs.writeText "valet-fpm.conf" ''
     ; FPM pool configuration for Valet (managed by appreo.nix)
@@ -68,10 +88,6 @@ in
       name = "composer";
       link = true;
     }
-    {
-      name = "composer";
-      link = true;
-    }
     "percona-server"
     "memcached"
     "pkg-config"
@@ -81,7 +97,15 @@ in
 
   homebrew.casks = [
     "sencha"
+    "mysql-shell"
   ];
+
+  # Sencha Cmd's installer is x86_64-only; Rosetta must exist before brew bundle runs.
+  system.activationScripts.preActivation.text = lib.mkBefore ''
+    if ! /usr/bin/pgrep -q oahd; then
+      /usr/sbin/softwareupdate --install-rosetta --agree-to-license
+    fi
+  '';
 
   environment.systemPackages = [
     pkgs.libmemcached
@@ -90,6 +114,7 @@ in
     pkgs.libtool
     pkgs.code-cursor
     pkgs.zlib
+    pkgs.nodejs
     pkgs.pnpm
     pkgs.process-compose
     (pkgs.writeShellScriptBin "watch-appreo" ''
@@ -146,22 +171,15 @@ in
 
     PHP="${config.homebrew.prefix}/opt/php@8.3/bin/php"
     PECL="${config.homebrew.prefix}/opt/php@8.3/bin/pecl"
-    PHP_CONF_D="${config.homebrew.prefix}/etc/php/8.3/conf.d"
-    EXT_INI="$PHP_CONF_D/ext-memcached.ini"
 
     if [ -x "$PHP" ] && [ -x "$PECL" ] && ! "$PHP" -m | grep -q memcached; then
       printf -- "Installing PHP memcached extension via pecl...\n"
       PECL_PATH="${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.libtool}/bin:${pkgs.pkg-config}/bin:$PATH"
       PECL_AUTOCONF="${pkgs.autoconf}/bin/autoconf"
-      if printf -- "${pkgs.libmemcached}\n${pkgs.zlib.dev}\nno\nno\nno\nno\nno\nyes\nyes\n" \
+      if printf -- "${libmemcachedForPecl}\n${pkgs.zlib.dev}\nno\nno\nno\nno\nno\nyes\nyes\n" \
         | sudo -u ${config.hostSpec.primaryUser} \
           env PATH="$PECL_PATH" PHP_AUTOCONF="$PECL_AUTOCONF" "$PECL" install memcached; then
-        # Register the extension via conf.d so php loads it on next start.
-        if [ -d "$PHP_CONF_D" ] && [ ! -f "$EXT_INI" ]; then
-          printf -- "Writing %s\n" "$EXT_INI"
-          printf 'extension="memcached.so"\n' \
-            | sudo -u ${config.hostSpec.primaryUser} tee "$EXT_INI" >/dev/null
-        fi
+        : # pecl adds extension="memcached.so" to php.ini itself
       else
         printf -- "Warning: pecl install memcached failed; inspect output above.\n"
       fi

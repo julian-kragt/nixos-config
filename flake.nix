@@ -18,7 +18,14 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    brew-src = {
+      url = "github:Homebrew/brew";
+      flake = false;
+    };
+    nix-homebrew = {
+      url = "github:zhaofengli/nix-homebrew";
+      inputs.brew-src.follows = "brew-src";
+    };
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
       flake = false;
@@ -47,6 +54,11 @@
 
     nixvim = {
       url = "github:JulianKragt/nixvim";
+    };
+
+    claude-obsidian = {
+      url = "github:AgriciDaniel/claude-obsidian";
+      flake = false;
     };
 
     nix-secrets = {

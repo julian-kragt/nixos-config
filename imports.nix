@@ -2,7 +2,6 @@
 {
   imports = [
     ./modules/host-spec.nix
-    ./modules/bootstrap-base.nix
 
     ./home/common/core/baseline.nix
     ./home/common/core/darwin.nix
@@ -11,6 +10,7 @@
     ./home/common/core/ssh.nix
     ./home/common/core/nixos.nix
 
+    ./home/common/optional/apps/blender.nix
     ./home/common/optional/apps/bruno.nix
     ./home/common/optional/apps/chrome.nix
     ./home/common/optional/apps/cursor.nix
@@ -22,8 +22,10 @@
     ./home/common/optional/apps/goland.nix
     ./home/common/optional/apps/slack.nix
     ./home/common/optional/apps/obsidian.nix
+    ./home/common/optional/apps/claude-obsidian.nix
     ./home/common/optional/apps/spotify.nix
     ./home/common/optional/apps/sunsama.nix
+    ./home/common/optional/apps/zotero.nix
     ./home/common/optional/shell/zsh.nix
     ./home/common/optional/shell/starship.nix
 
@@ -55,8 +57,10 @@
     ./hosts/common/optional/openssh.nix
     ./hosts/common/optional/nix-homebrew.nix
     ./hosts/common/optional/onedrive.nix
+    ./hosts/common/optional/microsoft-apps.nix
     ./hosts/common/optional/claude-desktop.nix
     ./hosts/common/optional/sunsama.nix
+    ./hosts/common/optional/zotero.nix
 
     ./hosts/common/accounts/default.nix
     ./hosts/common/accounts/system-users.nix
@@ -70,6 +74,7 @@
     ./hosts/darwin/workhorse/host-spec.nix
 
     ./hosts/nixos/common/default.nix
+    ./hosts/nixos/common/bootstrap.nix
     ./hosts/nixos/atlas/default.nix
     ./hosts/nixos/atlas/host-spec.nix
     ./hosts/nixos/broadway/default.nix

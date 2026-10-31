@@ -14,21 +14,15 @@
     ];
   };
 
-  flake.nixosConfigurations.broadway-bootstrap = inputs.nixpkgs.lib.nixosSystem {
-    specialArgs = {
-      inherit inputs self;
-    };
-    modules = [ ./bootstrap.nix ];
-  };
-
   flake.nixosModules.host-broadway =
-    { ... }:
+    { lib, ... }:
     {
       imports = [
-        ./hardware-configuration.nix
         ./disko.nix
         inputs.disko.nixosModules.disko
       ]
+      # Absent until the installer has generated it (first install).
+      ++ lib.optional (builtins.pathExists ./hardware-configuration.nix) ./hardware-configuration.nix
       ++ (with self.nixosModules; [
         host-spec
         host-broadway-spec
@@ -37,5 +31,8 @@
         usersDispatch
         openssh
       ]);
+
+      # Normally set by hardware-configuration.nix.
+      nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
     };
 }

@@ -27,12 +27,12 @@ The script expects:
 
 It validates that:
 
-- `hosts/nixos/<host>/bootstrap.nix` exists
+- `hosts/nixos/<host>/disko.nix` exists (the generic installer bootstrap is generated from it)
 
 Then it builds references into your flake outputs:
 
-- `#nixosConfigurations.<host>-bootstrap.config`
-- `...provisionSpec` (read from the host bootstrap config)
+- `nixos-config-bootstrap#facts.<host>` and `nixos-config-bootstrap#lib.mkBootstrap` (the sibling `../nixos-config-bootstrap` flake)
+- `...hostSpec.primaryUser` (read from the host bootstrap config)
 
 So install behavior is driven by host-specific Nix config, not hardcoded shell logic.
 
@@ -44,16 +44,16 @@ So install behavior is driven by host-specific Nix config, not hardcoded shell l
 
 2. **Load and validate host bootstrap config**
    - resolves repo root
-   - checks bootstrap module exists for the host
+   - checks the host has a `disko.nix`
    - prepares flake attribute paths used by `nix eval`
 
-3. **Read install policy from Nix (`provisionSpec`)**
-   - the script evaluates values from the host’s bootstrap install spec
-   - this defines how installation should be performed
+3. **Resolve install policy**
+   - host facts (e.g. primary user) come from the bootstrap `hostSpec`
+   - policy knobs are script defaults, overridable via env: `GENERATE_HARDWARE`, `ENROLL_SOPS`, `PROVISION_USER_AGE`, `PUSH_SECRETS`, `DEPLOY_FULL`, `SSH_TIMEOUT`, `LUKS_FILE`, `NIX_SECRETS_PATH`, `NIXOS_ANYWHERE_EXTRA`
 
 4. **Run install/provisioning step (full mode)**
    - performs unattended install path (documented in script header as nixos-anywhere based)
-   - disk/install policy comes from `bootstrap.nix`
+   - disk layout comes from the host's `disko.nix`
    - LUKS passphrase is expected from `DISKO_PASSWORD` or interactive prompt
    - secret passphrases are not stored in Nix
 
@@ -108,7 +108,7 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 ## Preconditions
 
 - host exists at `hosts/nixos/<host>/`
-- `hosts/nixos/<host>/bootstrap.nix` defines expected `provisionSpec`
+- the host has `host-spec` and `disko.nix` (the generic bootstrap in `nixos-config-bootstrap` reads the host's disko devices and root keys from this flake's `bootstrap.<host>` output; it has no hardware config)
 - machine reachable over network/SSH at `<ip>`
 - required local tooling available (`nix`, and whatever bootstrap path requires)
 - if encrypted disks are used, provide `DISKO_PASSWORD` or be ready to enter it interactively
@@ -118,8 +118,8 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 - **“host is not a NixOS host with bootstrap.nix”**
   - verify host directory and `bootstrap.nix` path
 - **Nix eval failures**
-  - confirm flake output naming matches `<host>-bootstrap`
-  - validate `provisionSpec` exists and is well-formed
+  - confirm `nixos-config-bootstrap#facts.<host>` evaluates
+  - validate the host's `hostSpec` evaluates
 - **Install reaches disk encryption prompt**
   - set/export `DISKO_PASSWORD` before running, or enter manually
 - **Secrets unavailable after install**

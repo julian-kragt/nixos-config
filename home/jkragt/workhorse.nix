@@ -1,11 +1,12 @@
 { self, ... }:
 {
   flake.homeModules.jkragt-workhorse =
-    { pkgs, ... }:
+    { ... }:
     {
       imports =
         with self.homeModules;
         [
+          blender
           chrome
           bruno
           cursor
@@ -17,17 +18,14 @@
           slack
           spotify
           sunsama
+          zotero
           obsidian
-          desktop-aerospace
+          claude-obsidian
           docker
           zoxide
           zsh
           starship
         ];
-
-      home.packages = [
-        pkgs.claude-code
-      ];
 
       programs.git = {
         settings.user = {
