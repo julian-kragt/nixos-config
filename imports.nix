@@ -22,7 +22,7 @@
     ./home/common/optional/apps/goland.nix
     ./home/common/optional/apps/slack.nix
     ./home/common/optional/apps/obsidian.nix
-    ./home/common/optional/apps/claude-obsidian.nix
+    ./home/common/optional/apps/claude-code.nix
     ./home/common/optional/apps/spotify.nix
     ./home/common/optional/apps/sunsama.nix
     ./home/common/optional/apps/zotero.nix
@@ -74,7 +74,6 @@
     ./hosts/darwin/workhorse/host-spec.nix
 
     ./hosts/nixos/common/default.nix
-    ./hosts/nixos/common/bootstrap.nix
     ./hosts/nixos/atlas/default.nix
     ./hosts/nixos/atlas/host-spec.nix
     ./hosts/nixos/broadway/default.nix

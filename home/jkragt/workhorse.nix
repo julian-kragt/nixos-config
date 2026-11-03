@@ -20,7 +20,7 @@
           sunsama
           zotero
           obsidian
-          claude-obsidian
+          claude-code
           docker
           zoxide
           zsh

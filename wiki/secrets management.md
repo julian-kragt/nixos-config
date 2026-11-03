@@ -141,4 +141,3 @@ Also keep the secrets repo private, because the recipient list in `.sops.yaml` r
 - `nix-secrets/.sops.yaml`
 - `nix-secrets/justfile`
 - `nixos-config/README.md`
-- `nixos-config/scripts/install-host.sh`

@@ -15,6 +15,7 @@ config/
 ├── flake.nix          # inputs + mkFlake { imports = [ parts imports ]; }
 ├── parts.nix          # systems, imports lib/default.nix, devShell (perSystem)
 ├── imports.nix        # explicit list of every flake-parts fragment
+├── bootstrap/         # `bootstrap.<host>`: the mapper nixos-bootstrap reads (kept apart from the config)
 ├── lib/
 │   ├── default.nix    # flake-parts module → `flake.lib.custom`
 │   └── helpers.nix    # helper functions (`inputs`, `lib`)
@@ -22,7 +23,6 @@ config/
 │   └── host-spec.nix
 ├── hosts/
 │   ├── common/{core,optional,users}/
-│   ├── nixos/common/bootstrap.nix   # `bootstrap.<host>`: the contract with nixos-config-bootstrap
 │   ├── nixos/<host>/
 │   └── darwin/<host>/
 ├── home/
@@ -30,13 +30,14 @@ config/
 │   └── <user>/
 │       ├── common/{core,optional}/   # per-user HM shared across hosts
 │       └── <hostname>.nix
-├── scripts/install-host.sh
 └── justfile
 ```
 
 ## Conventions
 
 - Each entry in [`imports.nix`](imports.nix) is a flake-parts fragment shaped `{ ... }: { flake.<thing> = ...; }`.
+- [`bootstrap/`](bootstrap/default.nix) is the one fragment outside `imports.nix`: `flake.nix` imports it, and it only
+  reads the evaluated `nixosConfigurations` (the mapper for nixos-bootstrap).
 - Per-host `disko.nix` and `hardware-configuration.nix` are plain modules imported by that host’s `default.nix` only (not listed in `imports.nix`).
 - Helpers: [`lib/default.nix`](lib/default.nix) defines `flake.lib.custom` → use `self.lib.custom.<name>` in dendritic fragments (see [`hosts/common/users/default.nix`](hosts/common/users/default.nix)).
 - Hosts compose features by symbolic name: `imports = with self.nixosModules; [ core openssh tailscale ];`
@@ -79,9 +80,6 @@ just              # list recipes
 just check        # nix flake check
 just rebuild      # rebuild current host (auto-detects darwin/linux)
 just rebuild HOST # rebuild a specific host
-just install HOST IP       # full NixOS install (nixos-anywhere + SOPS + deploy)
-just enroll-sops HOST IP   # SOPS enrollment only (recovery)
-just deploy-remote HOST IP # remote full-config deploy only (recovery)
 just users HOST            # list users wired onto a host (filesystem-derived)
 ```
 
@@ -97,50 +95,32 @@ See §6 of the architecture plan. Short version:
 3. For each user that should live on the host, create `home/<user>/<host>.nix`
    exporting `flake.homeModules.<user>-<host>`. Existence is the activation
    switch.
-4. NixOS: set the real disk device in `disko.nix`, then `just install <host> <ip>`.
+4. NixOS: set the real disk device in `disko.nix`, then install it with [`../nixos-installer`](../nixos-installer) (still being built).
    Darwin: `just rebuild <host>`.
 
 ### NixOS install (bootstrap)
 
-The bootstrap lives in its own project, [`../nixos-config-bootstrap`](../nixos-config-bootstrap),
-a flake that takes this flake as an input and reads only its `bootstrap.<host>` output
-([`hosts/nixos/common/bootstrap.nix`](hosts/nixos/common/bootstrap.nix)), one entry per directory under
-`hosts/nixos/`:
+The first install of a NixOS host is done by [`../nixos-bootstrap`](../nixos-bootstrap), a generic flake that takes
+this flake as its `config` input and reads only its `bootstrap.<host>` output: the mapper in
+[`bootstrap/default.nix`](bootstrap/default.nix). It has an entry for every `nixosConfigurations` host with a disko
+layout (atlas, broadway), taken from that host's evaluated config:
 
-- `diskoDevices`: the host's disk layout
+- `system`: `nixpkgs.hostPlatform.system`
+- `diskoDevices`: the host's `disko.devices`
 - `rootAuthorizedKeys`: root's SSH keys from the full config (primary user's keys + super)
-- `hardwareConfigPath`: where the installer writes the generated hardware config
+- `hardwareConfigPath`: `hosts/nixos/<host>/hardware-configuration.nix`, which must exist before the install
+- `users`: the normal users, which the bootstrap system creates without a password or keys
 
-Those fields are a contract with that project: change them together. The bootstrap is intentionally minimal: disko,
-openssh, systemd-boot and **root** SSH access, with no hardware config. No Home Manager, SOPS, or normal users until
-the full deploy. Install behaviour (hardware generation, SOPS enrollment, full deploy, timeouts) is controlled by
+nixos-bootstrap fixes these fields (see its README). Pass this flake to it with
+`--override-input config git+file://$PWD` on nix commands, or through a wrapper flake for nixos-anywhere (its
+INSTALL.md). The bootstrap is intentionally minimal: disko, the host's hardware config, openssh, systemd-boot,
+**root** SSH access and the users without a login. No Home Manager, SOPS, or passwords until the full deploy. Install behaviour (hardware generation, SOPS enrollment, full deploy, timeouts) is controlled by
 installer flags, not Nix. LUKS passphrase is prompted at install time (or `DISKO_PASSWORD`).
 
-#### User age key delivery
+#### Keys
 
-`host-users/<hostName>-<primaryUser>.yaml` is encrypted to `&host_<hostName>` and `&user_<primaryUser>`. The install
-script therefore delivers that identity before Phase 8:
-
-1. Reads `SOPS_AGE_KEY_FILE` or `~/.config/sops/age/keys.txt` on the installer.
-2. Checks the public recipient matches `&user_<primaryUser>` in `.sops.yaml`.
-3. Streams the identity over SSH (stdin only) into:
-   - `/var/lib/sops-nix/key.txt` — so host sops-nix can decrypt `neededForUsers` passwords
-   - `/var/lib/sops-nix/pending-user-age-keys/<user>` — staged for Home Manager
-4. On first full activation, `account-secrets` installs the pending file to
-   `~/.config/sops/age/keys.txt` (mode `0600`) and removes the staging copy.
-
-**Security consequence:** every provisioned personal device holds a copy of the
-operator age identity and can decrypt `host-users/<host>-<user>.yaml` (password hash). Treat physical access and disk encryption accordingly. A YubiKey-only
-identity is **not** used here because sops-nix decrypts during unattended
-activation.
-
-**Recovery:** if a deploy failed after bootstrap/enrollment, ensure the local age
-identity exists (`just user-identity` in nix-secrets), then:
-
-```
-just deploy-remote HOST IP   # re-provisions the age key if needed, then switch
-just enroll-sops HOST IP     # host recipient only (no user key delivery)
-```
+The operator key is not copied to hosts. Each role has its own key; see `docs/ROADMAP.md` ("Decisions") in
+[`../nixos-installer`](../nixos-installer).
 
 ## Onboarding a new user
 

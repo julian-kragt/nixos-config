@@ -56,11 +56,6 @@
       url = "github:JulianKragt/nixvim";
     };
 
-    claude-obsidian = {
-      url = "github:AgriciDaniel/claude-obsidian";
-      flake = false;
-    };
-
     nix-secrets = {
       url = "git+ssh://git@github.com/JulianKragt/nix-secrets.git?ref=main&shallow=1";
       flake = false;
@@ -78,6 +73,8 @@
       imports = [
         ./parts.nix
         ./imports.nix
+        # The mapper for nixos-bootstrap, kept apart from the config's fragments.
+        ./bootstrap
       ];
     };
 }

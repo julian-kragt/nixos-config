@@ -1,3 +1,6 @@
+> **Removed:** `scripts/install-host.sh` and its just recipes no longer exist; `../nixos-installer` replaces them.
+> This page describes the old script, which is kept in git history: `git show 06dd040:scripts/install-host.sh`.
+
 # install-host: how it works
 
 This page explains what `scripts/install-host.sh` does and how the flow works end-to-end.
@@ -31,7 +34,7 @@ It validates that:
 
 Then it builds references into your flake outputs:
 
-- `nixos-config-bootstrap#facts.<host>` and `nixos-config-bootstrap#lib.mkBootstrap` (the sibling `../nixos-config-bootstrap` flake)
+- `nixos-bootstrap#installerData.<host>` and `nixos-bootstrap#nixosConfigurations.<host>` (the sibling `../nixos-bootstrap` flake)
 - `...hostSpec.primaryUser` (read from the host bootstrap config)
 
 So install behavior is driven by host-specific Nix config, not hardcoded shell logic.
@@ -108,7 +111,7 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 ## Preconditions
 
 - host exists at `hosts/nixos/<host>/`
-- the host has `host-spec` and `disko.nix` (the generic bootstrap in `nixos-config-bootstrap` reads the host's disko devices and root keys from this flake's `bootstrap.<host>` output; it has no hardware config)
+- the host has `host-spec` and `disko.nix` (the generic bootstrap in `nixos-bootstrap` reads the host's disko devices, root keys, users and hardware config path from this flake's `bootstrap.<host>` output)
 - machine reachable over network/SSH at `<ip>`
 - required local tooling available (`nix`, and whatever bootstrap path requires)
 - if encrypted disks are used, provide `DISKO_PASSWORD` or be ready to enter it interactively
@@ -118,7 +121,7 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 - **“host is not a NixOS host with bootstrap.nix”**
   - verify host directory and `bootstrap.nix` path
 - **Nix eval failures**
-  - confirm `nixos-config-bootstrap#facts.<host>` evaluates
+  - confirm `nixos-bootstrap#installerData.<host>` evaluates
   - validate the host's `hostSpec` evaluates
 - **Install reaches disk encryption prompt**
   - set/export `DISKO_PASSWORD` before running, or enter manually
