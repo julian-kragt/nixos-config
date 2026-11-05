@@ -34,7 +34,7 @@ It validates that:
 
 Then it builds references into your flake outputs:
 
-- `nixos-bootstrap#installerData.<host>` and `nixos-bootstrap#nixosConfigurations.<host>` (the sibling `../nixos-bootstrap` flake)
+- `installerData.<host>` and `nixosConfigurations.<host>-bootstrap` (added by the `nixos-bootstrap` input)
 - `...hostSpec.primaryUser` (read from the host bootstrap config)
 
 So install behavior is driven by host-specific Nix config, not hardcoded shell logic.
@@ -111,7 +111,7 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 ## Preconditions
 
 - host exists at `hosts/nixos/<host>/`
-- the host has `host-spec` and `disko.nix` (the generic bootstrap in `nixos-bootstrap` reads the host's disko devices, root keys, users and hardware config path from this flake's `bootstrap.<host>` output)
+- the host has `host-spec` and `disko.nix` (the generic bootstrap in `nixos-bootstrap` reads the host's disko devices, root keys, users and hardware config path from this flake's `bootstrapEntries.<host>` output)
 - machine reachable over network/SSH at `<ip>`
 - required local tooling available (`nix`, and whatever bootstrap path requires)
 - if encrypted disks are used, provide `DISKO_PASSWORD` or be ready to enter it interactively
@@ -121,7 +121,7 @@ bash scripts/install-host.sh <host> <ip> --deploy-remote
 - **“host is not a NixOS host with bootstrap.nix”**
   - verify host directory and `bootstrap.nix` path
 - **Nix eval failures**
-  - confirm `nixos-bootstrap#installerData.<host>` evaluates
+  - confirm `.#installerData.<host>` evaluates
   - validate the host's `hostSpec` evaluates
 - **Install reaches disk encryption prompt**
   - set/export `DISKO_PASSWORD` before running, or enter manually

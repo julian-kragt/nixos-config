@@ -244,6 +244,21 @@
         "url": "ssh://git@github.com/JulianKragt/nix-secrets.git"
       }
     },
+    "nixos-bootstrap": {
+      "locked": {
+        "lastModified": 1793892075,
+        "narHash": "sha256-QrI55TWAaPHsvahUxerN0tqzzzxPyHVE7CqI2DTorog=",
+        "owner": "julian-kragt",
+        "repo": "nixos-bootstrap",
+        "rev": "960fce01edb991cdeec83e7d7b9827d0b92515e4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "julian-kragt",
+        "repo": "nixos-bootstrap",
+        "type": "github"
+      }
+    },
     "nixos-wsl": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -397,6 +412,7 @@
         "nix-homebrew": "nix-homebrew",
         "nix-index-database": "nix-index-database",
         "nix-secrets": "nix-secrets",
+        "nixos-bootstrap": "nixos-bootstrap",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",

@@ -65,6 +65,8 @@
       url = "github:nix-community/NixOS-WSL/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-bootstrap.url = "github:julian-kragt/nixos-bootstrap";
   };
 
   outputs =
@@ -73,7 +75,7 @@
       imports = [
         ./parts.nix
         ./imports.nix
-        # The mapper for nixos-bootstrap, kept apart from the config's fragments.
+        # The entries for nixos-bootstrap, kept apart from the config's fragments.
         ./bootstrap
       ];
     };

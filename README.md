@@ -15,7 +15,7 @@ config/
 ├── flake.nix          # inputs + mkFlake { imports = [ parts imports ]; }
 ├── parts.nix          # systems, imports lib/default.nix, devShell (perSystem)
 ├── imports.nix        # explicit list of every flake-parts fragment
-├── bootstrap/         # `bootstrap.<host>`: the mapper nixos-bootstrap reads (kept apart from the config)
+├── bootstrap/         # `bootstrapEntries.<host>`: the entries nixos-bootstrap reads (kept apart from the config)
 ├── lib/
 │   ├── default.nix    # flake-parts module → `flake.lib.custom`
 │   └── helpers.nix    # helper functions (`inputs`, `lib`)
@@ -37,7 +37,7 @@ config/
 
 - Each entry in [`imports.nix`](imports.nix) is a flake-parts fragment shaped `{ ... }: { flake.<thing> = ...; }`.
 - [`bootstrap/`](bootstrap/default.nix) is the one fragment outside `imports.nix`: `flake.nix` imports it, and it only
-  reads the evaluated `nixosConfigurations` (the mapper for nixos-bootstrap).
+  reads the evaluated `nixosConfigurations` (the entries for nixos-bootstrap), and adds the generated systems.
 - Per-host `disko.nix` and `hardware-configuration.nix` are plain modules imported by that host’s `default.nix` only (not listed in `imports.nix`).
 - Helpers: [`lib/default.nix`](lib/default.nix) defines `flake.lib.custom` → use `self.lib.custom.<name>` in dendritic fragments (see [`hosts/common/users/default.nix`](hosts/common/users/default.nix)).
 - Hosts compose features by symbolic name: `imports = with self.nixosModules; [ core openssh tailscale ];`
@@ -100,10 +100,11 @@ See §6 of the architecture plan. Short version:
 
 ### NixOS install (bootstrap)
 
-The first install of a NixOS host is done by [`../nixos-bootstrap`](../nixos-bootstrap), a generic flake that takes
-this flake as its `config` input and reads only its `bootstrap.<host>` output: the mapper in
-[`bootstrap/default.nix`](bootstrap/default.nix). It has an entry for every `nixosConfigurations` host with a disko
-layout (atlas, broadway), taken from that host's evaluated config:
+The first install of a NixOS host is done by [`../nixos-bootstrap`](../nixos-bootstrap), a generic flake that
+this flake takes as an input. Its module, imported in [`bootstrap/default.nix`](bootstrap/default.nix), reads only the
+`bootstrapEntries.<host>` output from that file and adds `nixosConfigurations.<host>-bootstrap` and `installerData.<host>`.
+There's an entry for each host named in that file (atlas, broadway), taken from that host's evaluated config. A new NixOS
+host needs adding to that list:
 
 - `system`: `nixpkgs.hostPlatform.system`
 - `diskoDevices`: the host's `disko.devices`
@@ -111,9 +112,8 @@ layout (atlas, broadway), taken from that host's evaluated config:
 - `hardwareConfigPath`: `hosts/nixos/<host>/hardware-configuration.nix`, which must exist before the install
 - `users`: the normal users, which the bootstrap system creates without a password or keys
 
-nixos-bootstrap fixes these fields (see its README). Pass this flake to it with
-`--override-input config git+file://$PWD` on nix commands, or through a wrapper flake for nixos-anywhere (its
-INSTALL.md). The bootstrap is intentionally minimal: disko, the host's hardware config, openssh, systemd-boot,
+nixos-bootstrap fixes these fields (see its README), and `flake.lock` pins its version. Install with
+`nixos-anywhere --flake .#<host>-bootstrap` (its INSTALL.md). The bootstrap is intentionally minimal: disko, the host's hardware config, openssh, systemd-boot,
 **root** SSH access and the users without a login. No Home Manager, SOPS, or passwords until the full deploy. Install behaviour (hardware generation, SOPS enrollment, full deploy, timeouts) is controlled by
 installer flags, not Nix. LUKS passphrase is prompted at install time (or `DISKO_PASSWORD`).
 
