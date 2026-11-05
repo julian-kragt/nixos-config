@@ -143,7 +143,10 @@ in
     a = "php artisan";
   };
 
-  # Install the PHP memcached extension automatically when it's missing.
+  # Install the PHP memcached extension automatically when it's missing, broken,
+  # or linked against anything but the current libmemcached. The .so hardcodes
+  # /nix/store paths that brew and pecl know nothing about, so it would otherwise
+  # break once a flake update's old libmemcached gets garbage-collected.
   # pecl is interactive, so we feed the prompt answers via printf:
   #   libmemcached dir, zlib dir, fastlz=no, igbinary=no, json=no, msgpack=no,
   #   sasl=no, sessions=yes, memcached protocol=yes
@@ -171,14 +174,22 @@ in
 
     PHP="${config.homebrew.prefix}/opt/php@8.3/bin/php"
     PECL="${config.homebrew.prefix}/opt/php@8.3/bin/pecl"
+    PHP_CONFIG="${config.homebrew.prefix}/opt/php@8.3/bin/php-config"
+    PHP_INI="${config.homebrew.prefix}/etc/php/${phpVersion}/php.ini"
 
-    if [ -x "$PHP" ] && [ -x "$PECL" ] && ! "$PHP" -m | grep -q memcached; then
+    # Don't grep `php -m` here: a failed load prints a warning naming memcached to stdout.
+    if [ -x "$PHP" ] && [ -x "$PECL" ] && {
+      ! "$PHP" -r 'exit(extension_loaded("memcached") ? 0 : 1);' >/dev/null 2>&1 ||
+        ! /usr/bin/otool -L "$("$PHP_CONFIG" --extension-dir)/memcached.so" | grep -qF "${pkgs.libmemcached}/lib/"
+    }; then
       printf -- "Installing PHP memcached extension via pecl...\n"
       PECL_PATH="${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.libtool}/bin:${pkgs.pkg-config}/bin:$PATH"
       PECL_AUTOCONF="${pkgs.autoconf}/bin/autoconf"
+      # pecl appends to php.ini on every install, even if the line already exists.
+      [ ! -f "$PHP_INI" ] || sudo -u ${config.hostSpec.primaryUser} /usr/bin/sed -i "" '/^extension="memcached\.so"$/d' "$PHP_INI"
       if printf -- "${libmemcachedForPecl}\n${pkgs.zlib.dev}\nno\nno\nno\nno\nno\nyes\nyes\n" \
         | sudo -u ${config.hostSpec.primaryUser} \
-          env PATH="$PECL_PATH" PHP_AUTOCONF="$PECL_AUTOCONF" "$PECL" install memcached; then
+          env PATH="$PECL_PATH" PHP_AUTOCONF="$PECL_AUTOCONF" "$PECL" install -f memcached; then
         : # pecl adds extension="memcached.so" to php.ini itself
       else
         printf -- "Warning: pecl install memcached failed; inspect output above.\n"
