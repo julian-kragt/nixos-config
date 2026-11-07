@@ -35,7 +35,5 @@
 
       # Normally set by hardware-configuration.nix.
       nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-
-      users.users.root.initialPassword = "test";
     };
 }

@@ -11,10 +11,12 @@ let
       sops = {
         defaultSopsFile = "${inputs.nix-secrets}/hosts/${config.hostSpec.hostName}.yaml";
         validateSopsFiles = false;
+        # Only the host's own age key, created by the installer. Never the SSH
+        # host key, and never a new key: one would decrypt nothing.
         age = {
-          sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+          sshKeyPaths = [ ];
           keyFile = "/var/lib/sops-nix/key.txt";
-          generateKey = true;
+          generateKey = false;
         };
       };
     };
