@@ -16,7 +16,6 @@
     ./home/common/optional/apps/cursor.nix
     ./home/common/optional/apps/firefox.nix
     ./home/common/optional/apps/ghostty.nix
-    ./home/common/optional/apps/keepassxc.nix
     ./home/common/optional/apps/nixvim.nix
     ./home/common/optional/apps/phpstorm.nix
     ./home/common/optional/apps/goland.nix

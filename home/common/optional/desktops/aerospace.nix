@@ -106,10 +106,6 @@
           [[on-window-detected]]
           if.app-id = 'com.apple.systempreferences'
           run = 'layout floating'
-
-          [[on-window-detected]]
-          if.app-id = 'org.keepassxc.keepassxc'
-          run = 'layout floating'
         '';
       };
     };

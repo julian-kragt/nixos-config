@@ -12,7 +12,6 @@
           cursor
           firefox
           ghostty
-          keepassxc
           nixvim
           phpstorm
           slack
@@ -42,7 +41,5 @@
           }
         ];
       };
-
-      programs.keepassxc.enable = true;
     };
 }
