@@ -21,6 +21,7 @@
           obsidian
           claude-code
           docker
+          gh
           zoxide
           zsh
           starship

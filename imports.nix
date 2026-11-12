@@ -30,6 +30,7 @@
 
     ./home/common/optional/services/docker.nix
 
+    ./home/common/optional/programs/gh.nix
     ./home/common/optional/programs/zoxide.nix
 
     ./overlays/default.nix
