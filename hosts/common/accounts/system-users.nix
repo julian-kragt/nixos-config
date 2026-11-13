@@ -19,7 +19,8 @@ in
           home = "/home/${u}";
           openssh.authorizedKeys.keys = pubKeysFor u ++ superPubKeys;
         }
-        // lib.optionalAttrs config.accounts.users.${u}.secrets {
+        # No secret when nix-secrets' user templates have no hashedPassword.
+        // lib.optionalAttrs (config.sops.secrets ? "passwords/${u}") {
           hashedPasswordFile = config.sops.secrets."passwords/${u}".path;
         })
         // lib.optionalAttrs (config.accounts.activeUsers != [ ]) {

@@ -58,7 +58,9 @@
 
     nix-secrets = {
       url = "git+ssh://git@github.com/JulianKragt/nix-secrets.git?ref=main&shallow=1";
-      flake = false;
+      # Its secretsEntry is checked with this config's nixos-bootstrap.
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixos-bootstrap.follows = "nixos-bootstrap";
     };
 
     nixos-wsl = {
