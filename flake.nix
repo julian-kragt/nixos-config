@@ -63,6 +63,10 @@
       inputs.nixos-bootstrap.follows = "nixos-bootstrap";
     };
 
+    # Work settings for workhorse, kept out of this public repository. Only workhorse imports
+    # it, so other hosts build without access to it.
+    nixos-config-private.url = "git+ssh://git@github.com/julian-kragt/nixos-config-private.git?ref=main&shallow=1";
+
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL/main";
       inputs.nixpkgs.follows = "nixpkgs";

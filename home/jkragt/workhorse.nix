@@ -1,11 +1,12 @@
-{ self, ... }:
+{ self, inputs, ... }:
 {
   flake.homeModules.jkragt-workhorse =
     { ... }:
     {
       imports =
-        with self.homeModules;
-        [
+        # Work git email and bookmarks, from the private repository.
+        [ inputs.nixos-config-private.homeModules.work ]
+        ++ (with self.homeModules; [
           blender
           chrome
           bruno
@@ -25,7 +26,7 @@
           zoxide
           zsh
           starship
-        ];
+        ]);
 
       programs.git = {
         settings.user = {

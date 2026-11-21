@@ -28,6 +28,8 @@
         sunsama
         zotero
         usersDispatch
+        # Work project setup (Homebrew, PHP), from the private repository.
+        inputs.nixos-config-private.darwinModules.work
       ];
 
       nixpkgs.hostPlatform = "aarch64-darwin";
