@@ -266,6 +266,23 @@
         "type": "github"
       }
     },
+    "nixos-config-private": {
+      "locked": {
+        "lastModified": 1795293439,
+        "narHash": "sha256-+p/7QFXsaR3pT2ltcQS4XwaMkALn7MyprrNf6FOZeR8=",
+        "ref": "main",
+        "rev": "d6b214d0fa803324a95ed98e69ba42d19357d49c",
+        "shallow": true,
+        "type": "git",
+        "url": "ssh://git@github.com/julian-kragt/nixos-config-private.git"
+      },
+      "original": {
+        "ref": "main",
+        "shallow": true,
+        "type": "git",
+        "url": "ssh://git@github.com/julian-kragt/nixos-config-private.git"
+      }
+    },
     "nixos-wsl": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -420,6 +437,7 @@
         "nix-index-database": "nix-index-database",
         "nix-secrets": "nix-secrets",
         "nixos-bootstrap": "nixos-bootstrap",
+        "nixos-config-private": "nixos-config-private",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",
